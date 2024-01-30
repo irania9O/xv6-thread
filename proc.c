@@ -221,6 +221,50 @@ fork(void)
   return pid;
 }
 
+int
+clone(void(*func)(), void* stack)
+{
+    int i, pid;
+    struct proc *np;
+    struct proc *curproc = myproc(); // https://stackoverflow.com/questions/61043444/xv6-pwd-implementation
+
+    // Allocate process.
+    if((np = allocproc()) == 0) //https://pekopeko11.sakura.ne.jp/unix_v6/xv6-book/en/The_first_process.html#:~:text=The%20job%20of%20allocproc%20(2205,for%20the%20very%20first%20process.
+        return -1;
+
+    *np->tf = *curproc->tf; // syscall -> for syscall or expections
+    np->tf->esp = (uint) stack; // update stack pointer address to new stack
+    np->tf->eip = (uint) func; // like pc
+
+    np->thstack = stack; //save address of stack
+    np-> parent = curproc;
+    np->pgdir = curproc -> pgdir; // page table
+    np->sz = curproc -> sz;
+
+//    https://stackoverflow.com/questions/34827208/what-is-context-in-xv6
+//    ebp: Stack Base Pointer, for holding the address of the current stack frame
+//    eip: Instruction Pointer, points to instruction to be executed
+
+    // Clear %eax so that fork returns 0 in the child.
+    np->tf->eax = 0;
+    for(i = 0; i < NOFILE; i++)
+        if(curproc->ofile[i])
+            np->ofile[i] = filedup(curproc->ofile[i]);
+    np->cwd = idup(curproc->cwd);
+
+    safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+
+    pid = np->pid;
+
+    acquire(&ptable.lock);
+
+    np->state = RUNNABLE;
+
+    release(&ptable.lock);
+
+    return pid;
+}
+
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
@@ -275,7 +319,7 @@ wait(void)
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
-  
+
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -309,6 +353,58 @@ wait(void)
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
   }
+}
+
+
+
+int
+join(void** stack)
+{
+    struct proc *p;
+    int havekids, pid;
+    struct proc *curproc = myproc();
+
+    acquire(&ptable.lock);
+
+    //check to see if any zombie childern
+    for(;;)
+    {
+        havekids = 0;
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+            if(p->parent != curproc)
+                continue;
+
+            havekids = 1;
+            if(p->state == ZOMBIE)
+            {
+                // Found one.
+                pid = p->pid;
+                kfree(p->kstack);
+                p->kstack = 0;
+//                freevm(p->pgdir);
+                p->pid = 0;
+                p->parent = 0;
+                p->name[0] = 0;
+                p->killed = 0;
+                p->state = UNUSED;
+
+                stack = p->thstack;
+                p->thstack = 0; // reset thread
+
+                release(&ptable.lock);
+                return pid;
+            }
+        }
+
+        // No point waiting if we don't have any children.
+        if(!havekids || curproc->killed){
+            release(&ptable.lock);
+            return -1;
+        }
+
+        // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+        sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+    }
 }
 
 //PAGEBREAK: 42

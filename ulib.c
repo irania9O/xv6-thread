@@ -97,10 +97,23 @@ memmove(void *vdst, const void *vsrc, int n)
 {
   char *dst;
   const char *src;
-
   dst = vdst;
   src = vsrc;
   while(n-- > 0)
     *dst++ = *src++;
   return vdst;
+}
+
+int thread_create(void (*func)())
+{
+  void *stack;
+  stack = malloc(4096); // or PGSIZE, so must include #include "mmu.h"
+  return clone(func, stack);
+}
+
+int thread_join()
+{
+  void *stackPointer;
+  int x = join(&stackPointer);
+  return x;
 }

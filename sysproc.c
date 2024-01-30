@@ -8,6 +8,24 @@
 #include "proc.h"
 
 
+int
+sys_clone(void)
+{
+    int func, stack;
+    if(argint(0, &func)<0 || argint(1, &stack)<0)
+        return -1;
+    return clone((void *)func, (void *)stack);
+}
+
+int
+sys_join(void)
+{
+    void **stack;
+    int arg;
+    arg = argint(0, &arg);
+    stack = (void**) arg;
+    return join(stack);
+}
 
 int
 sys_hello(void) {
