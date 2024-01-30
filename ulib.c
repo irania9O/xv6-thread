@@ -117,3 +117,17 @@ int thread_join()
   int x = join(&stackPointer);
   return x;
 }
+
+
+int alilock_init(alilock *al) {
+    al->locked = 0;
+    return 0;
+}
+
+void alilock_acquire(alilock *al) {
+    while (xchg(&al->locked, 1) != 0);  // Spin until the lock is acquired
+}
+
+void alilock_release(alilock *al) {
+    xchg(&al->locked, 0);
+}

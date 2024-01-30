@@ -9,21 +9,29 @@
 #include "x86.h"
 
 #define SLEEP_TIME 100
- int counter = 0;
-
+int counter = 0;
+alilock* lock;
 
 void new_thread()
 {
+    alilock_acquire(lock);
     counter++;
     printf(1, "HELLO IM A THREAD WITH COUNT %d \n ", counter);
     sleep(SLEEP_TIME);
+    alilock_release(lock);
     exit();
 }
 
 int
 main(int argc, char *argv[])
 {
-    int start=0;
+    int lock_init_res;
+    lock_init_res = alilock_init(lock);
+    if (lock_init_res != 0){
+        exit();
+    }
+
+    int start;
     int end=10;
 
     for (start = 0; start < end; start++){

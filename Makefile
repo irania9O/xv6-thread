@@ -179,6 +179,7 @@ UPROGS=\
 	_stressfs\
 	_wc\
 	_zombie\
+	_hello\
 	_threads\
 
 fs.img: mkfs README $(UPROGS)
@@ -252,12 +253,13 @@ EXTRA=\
 	printf.c umalloc.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
+	hello.c\
 	threads.c\
 
 dist:
 	rm -rf dist
 	mkdir dist
-	for i in $(FILES); \
+	for i in $(FILES); \ 
 	do \
 		grep -v PAGEBREAK $$i >dist/$$i; \
 	done

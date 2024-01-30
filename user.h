@@ -1,5 +1,9 @@
 struct stat;
 struct rtcdate;
+typedef struct __alilock{
+  uint locked;
+}alilock;
+
 
 // system calls
 int fork(void);
@@ -40,6 +44,9 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
-
 int thread_create(void (*func)());
 int thread_join();
+
+int alilock_init(alilock *al);
+void alilock_acquire(alilock *al);
+void alilock_release(alilock *al);
